@@ -1,0 +1,14 @@
+.env
+__pycache__/
+*.pyc
+*.pyo
+.DS_Store
+data/raw/
+data/processed/
+data/outliers/
+data/reports/
+data/plots/
+*.egg-info/
+dist/
+build/
+.venv/
