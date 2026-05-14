@@ -1,8 +1,14 @@
+import re
 import pandas as pd
 from pathlib import Path
 from openpyxl import Workbook
 from openpyxl.styles import PatternFill, Font, Alignment
 from openpyxl.utils.dataframe import dataframe_to_rows
+
+
+def _instrument_sort_key(row: dict) -> int:
+    match = re.search(r"Instrument-(\d+)", row.get("station", ""), re.IGNORECASE)
+    return int(match.group(1)) if match else float("inf")
 
 
 # Hex fills for cell status colors
@@ -29,6 +35,7 @@ def generate_report(summary_rows: list[dict], output_path: Path) -> None:
     Status columns (e.g. 'uptime_status') drive cell color; they are hidden
     from the sheet after coloring.
     """
+    summary_rows = sorted(summary_rows, key=_instrument_sort_key)
     df = pd.DataFrame(summary_rows)
 
     # Columns to hide after they've been used for coloring

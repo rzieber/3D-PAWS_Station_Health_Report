@@ -3,6 +3,8 @@ import matplotlib.pyplot as plt
 import matplotlib.ticker as mticker
 from pathlib import Path
 
+from config import UPTIME_GREEN, UPTIME_YELLOW
+
 
 def plot_daily_uptime(station_name: str, daily_uptime: pd.Series, output_dir: Path) -> None:
     """
@@ -17,16 +19,16 @@ def plot_daily_uptime(station_name: str, daily_uptime: pd.Series, output_dir: Pa
 
     colors = []
     for v in values:
-        if v >= 0.95:
-            colors.append("#70AD47")   # green
-        elif v >= 0.80:
-            colors.append("#FFD966")   # yellow
+        if v >= UPTIME_GREEN:
+            colors.append("#70AD47")
+        elif v >= UPTIME_YELLOW:
+            colors.append("#FFD966")
         else:
-            colors.append("#FF7F7F")   # red
+            colors.append("#FF7F7F")
 
     ax.bar(dates, values, color=colors, edgecolor="white", linewidth=0.5)
-    ax.axhline(0.95, color="#70AD47", linewidth=1, linestyle="--", label="95% threshold")
-    ax.axhline(0.80, color="#FFD966", linewidth=1, linestyle="--", label="80% threshold")
+    ax.axhline(UPTIME_GREEN,  color="#70AD47", linewidth=1, linestyle="--", label=f"{UPTIME_GREEN:.0%} threshold")
+    ax.axhline(UPTIME_YELLOW, color="#FFD966", linewidth=1, linestyle="--", label=f"{UPTIME_YELLOW:.0%} threshold")
 
     ax.set_ylim(0, 1.05)
     ax.yaxis.set_major_formatter(mticker.PercentFormatter(xmax=1, decimals=0))

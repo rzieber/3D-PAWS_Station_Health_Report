@@ -69,7 +69,7 @@ def _remove_sentinels(df: pd.DataFrame, station_name: str) -> tuple[pd.DataFrame
     numeric_cols = df.select_dtypes(include="number").columns
 
     for col in numeric_cols:
-        mask = df[col] == SENTINEL_VALUE
+        mask = np.isclose(df[col].fillna(0), SENTINEL_VALUE)
         if mask.any():
             for _, row in df.loc[mask, ["time", col]].iterrows():
                 records.append({
@@ -135,8 +135,12 @@ def run_qc(
     df = pd.read_csv(raw_csv, encoding="latin1")
     df = df.loc[:, ~df.columns.str.contains(r"^Unnamed|^level_", case=False, na=False)]
 
-    if "time" not in df.columns:
+    # Normalize the timestamp column name to lowercase regardless of source casing
+    time_match = [c for c in df.columns if c.lower() == "time"]
+    if not time_match:
         raise ValueError(f"No 'time' column in {raw_csv.name}")
+    if time_match[0] != "time":
+        df = df.rename(columns={time_match[0]: "time"})
 
     df["time"] = pd.to_datetime(df["time"], errors="coerce")
 
