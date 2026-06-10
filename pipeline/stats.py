@@ -99,7 +99,9 @@ def calculate_uptime(df: pd.DataFrame, sampling_rate: int) -> dict:
 
 
 def uptime_status(uptime: float) -> str:
-    """Map an uptime fraction to 'green' (pass) | 'red' (fail)."""
+    """Map an uptime fraction to 'green' (pass) | 'red' (fail) | 'grey' (no data)."""
+    if uptime == 0.0:
+        return "grey"
     return "green" if uptime >= UPTIME_PASS_THRESHOLD else "red"
 
 

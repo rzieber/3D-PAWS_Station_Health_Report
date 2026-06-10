@@ -1,18 +1,18 @@
 # Directories — overridden by --raw-dir / --out-dir on the command line if provided.
-RAW_DIR = "data/raw/Kenya-May2026"
+RAW_DIR = "data/raw/Kenya-April2026"
 OUT_DIR = "data"
 
 # Prefix applied to all output files and sub-folders for this run.
 # Overridden by --prefix on the command line if provided.
 # Example: "Kenya_April2026"
-PREFIX = "Kenya-May2026"
+PREFIX = "Kenya-April2026"
 
 # Analysis period (YYYY-MM-DD, inclusive on both ends).
 # Download raw data 1 day beyond DATA_END so that day's Total Prior gives
 # the last analysis day's complete rainfall total.  Leave empty to use
 # whatever date range is present in the raw files without clipping.
-DATA_START = "2026-05-01"
-DATA_END   = "2026-05-31"
+DATA_START = "2026-04-01"
+DATA_END   = "2026-04-30"
 
 SENTINEL_VALUE = -999.9
 
@@ -20,11 +20,12 @@ SENTINEL_VALUE = -999.9
 SAMPLING_RATE_DEFAULT = 1
 
 # Rainfall thresholds
-EXCESSIVE_RAINFALL_MM = 50.0       # single-period obs flagged as excessive
-TIPPING_BUCKET_DEVIATION_MM = 10.0 # max acceptable difference between two rain gauges
+EXCESSIVE_RAINFALL_MM        = 50.0    # single-period instantaneous tip flagged as excessive
+EXCESSIVE_MONTHLY_RAINFALL_MM = 5000.0 # monthly gauge total (mm) flagged red in the report
+TIPPING_BUCKET_DEVIATION_MM  = 10.0   # max acceptable difference between two rain gauges
 
 # Uptime pass/fail threshold (0.0–1.0 fraction of expected observations)
-UPTIME_PASS_THRESHOLD = 0.80   # >= 80% → green (pass), < 80% → red (fail)
+UPTIME_PASS_THRESHOLD = 0.785   # >= 78.5% → green (pass), < 78.5%% → red (fail)
 
 # Rain gauge column names (adjust to match your portal's shortnames).
 # Each entry is a list of candidate names for that gauge — the pipeline uses

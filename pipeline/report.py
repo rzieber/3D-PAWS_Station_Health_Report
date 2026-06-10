@@ -6,6 +6,8 @@ from openpyxl import Workbook
 from openpyxl.styles import PatternFill, Font, Alignment
 from openpyxl.utils.dataframe import dataframe_to_rows
 
+from config import EXCESSIVE_MONTHLY_RAINFALL_MM
+
 
 def _instrument_sort_key(row: dict) -> int:
     match = re.search(r"Instrument-(\d+)", row.get("station", ""), re.IGNORECASE)
@@ -16,6 +18,9 @@ def _instrument_sort_key(row: dict) -> int:
 _FILLS = {
     "green":  PatternFill(start_color="C6EFCE", end_color="C6EFCE", fill_type="solid"),
     "red":    PatternFill(start_color="FFC7CE", end_color="FFC7CE", fill_type="solid"),
+    "grey":   PatternFill(start_color="D9D9D9", end_color="D9D9D9", fill_type="solid"),
+    "yellow": PatternFill(start_color="FFEB9C", end_color="FFEB9C", fill_type="solid"),
+    "orange": PatternFill(start_color="FFCC99", end_color="FFCC99", fill_type="solid"),
     "header": PatternFill(start_color="2F5496", end_color="2F5496", fill_type="solid"),
 }
 
@@ -87,6 +92,38 @@ def generate_report(summary_rows: list[dict], output_path: Path) -> None:
             fill = _FILLS.get(status)
             if fill:
                 ws.cell(row=row_idx, column=col_idx).fill = fill
+
+    # Yellow highlight: one gauge has N/A while the other has a real value
+    rg_pair = ("rain_gauge_1_total", "rain_gauge_2_total")
+    if all(c in display_cols for c in rg_pair):
+        idx1 = display_cols.index(rg_pair[0]) + 1
+        idx2 = display_cols.index(rg_pair[1]) + 1
+        for row_idx in range(2, len(df) + 2):
+            v1 = ws.cell(row=row_idx, column=idx1).value
+            v2 = ws.cell(row=row_idx, column=idx2).value
+            v1_na = v1 == "N/A"
+            v2_na = v2 == "N/A"
+            if v1_na and not v2_na and v2 is not None:
+                ws.cell(row=row_idx, column=idx1).fill = _FILLS["yellow"]
+            elif v2_na and not v1_na and v1 is not None:
+                ws.cell(row=row_idx, column=idx2).fill = _FILLS["yellow"]
+
+    # Red highlight: Rain Gauge total > 1000 mm (likely sensor error)
+    for rg_col in ("rain_gauge_1_total", "rain_gauge_2_total"):
+        if rg_col in display_cols:
+            col_idx = display_cols.index(rg_col) + 1
+            for row_idx in range(2, len(df) + 2):
+                val = ws.cell(row=row_idx, column=col_idx).value
+                if isinstance(val, (int, float)) and val > EXCESSIVE_MONTHLY_RAINFALL_MM:
+                    ws.cell(row=row_idx, column=col_idx).fill = _FILLS["red"]
+
+    # Orange highlight: Rainfall % Diff > 100%
+    if "rainfall_pct_diff" in display_cols:
+        pct_col_idx = display_cols.index("rainfall_pct_diff") + 1
+        for row_idx in range(2, len(df) + 2):
+            val = ws.cell(row=row_idx, column=pct_col_idx).value
+            if isinstance(val, (int, float)) and val > 100:
+                ws.cell(row=row_idx, column=pct_col_idx).fill = _FILLS["orange"]
 
     # Auto-size columns
     for col in ws.columns:

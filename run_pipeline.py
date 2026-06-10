@@ -38,7 +38,8 @@ from config import (SAMPLING_RATE_DEFAULT, RAIN_GAUGE_COLS,
 from pipeline.qc     import run_qc, infer_sampling_rate
 from pipeline.stats  import summarize_station, compute_daily_rainfall
 from pipeline.report import generate_report
-from pipeline.plots  import plot_monthly_uptime, plot_monthly_rainfall_totals, plot_daily_rainfall_bars
+from pipeline.plots  import (plot_monthly_uptime, plot_monthly_rainfall_totals,
+                             plot_daily_rainfall_bars, plot_rainfall_accumulation)
 
 
 def _resolve_col(df_columns: set, candidates) -> str:
@@ -146,6 +147,7 @@ def main():
             row[f"rain_gauge_{i}_total"] = total
             rainfall_row[display_col] = total
         plot_daily_rainfall_bars(plot_name, daily_by_gauge, plots_dir)
+        plot_rainfall_accumulation(plot_name, daily_by_gauge, plots_dir)
         rainfall_rows.append(rainfall_row)
 
         g1 = row.get("rain_gauge_1_total", float("nan"))
@@ -196,7 +198,7 @@ def main():
             "expected_obs":   "N/A",
             "actual_obs":     "N/A",
             "overall_uptime": 0.0,
-            "uptime_status":  "red",
+            "uptime_status":  "grey",
         })
 
     # Monthly uptime chart (all instruments in one plot)

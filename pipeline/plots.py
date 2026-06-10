@@ -98,7 +98,49 @@ def plot_daily_rainfall_bars(
     ax.legend(fontsize=8)
     plt.tight_layout()
 
-    out = output_dir / f"{station_name}_rainfall.png"
+    out = output_dir / f"{station_name}_rainfall_daily.png"
+    fig.savefig(out, dpi=150)
+    plt.close(fig)
+    print(f"[plots] Saved: {out}")
+
+
+def plot_rainfall_accumulation(
+    station_name: str,
+    daily_by_gauge: dict,
+    output_dir: Path,
+) -> None:
+    """
+    Time-series line chart of cumulative rainfall for each gauge.
+
+    daily_by_gauge : {label: pd.Series indexed by datetime.date}
+                     Each Series holds one day's total (mm).  NaN days are
+                     treated as zero for the running accumulation.
+    """
+    available = {label: s for label, s in daily_by_gauge.items() if s.notna().any()}
+    if not available:
+        print(f"[plots] {station_name}: no rainfall data, skipping accumulation plot")
+        return
+
+    colors = ["#4472C4", "#ED7D31", "#A9D18E", "#FF7F7F"]
+
+    all_dates = sorted(set().union(*[set(s.index) for s in available.values()]))
+    fig, ax = plt.subplots(figsize=(max(10, len(all_dates) * 0.5), 4))
+
+    for i, (label, series) in enumerate(available.items()):
+        series = series.sort_index().reindex(all_dates).fillna(0)
+        cumulative = series.cumsum()
+        ax.plot(cumulative.index, cumulative.values,
+                marker="o", markersize=3, linewidth=1.5,
+                label=label, color=colors[i % len(colors)])
+
+    ax.set_xlabel("Date")
+    ax.set_ylabel("Cumulative Rainfall (mm)")
+    ax.set_title(f"{station_name} — Cumulative Rainfall")
+    ax.legend(fontsize=8)
+    plt.xticks(rotation=45, ha="right", fontsize=7)
+    plt.tight_layout()
+
+    out = output_dir / f"{station_name}_rainfall_accumulation.png"
     fig.savefig(out, dpi=150)
     plt.close(fig)
     print(f"[plots] Saved: {out}")
