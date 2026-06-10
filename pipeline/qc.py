@@ -8,6 +8,35 @@ from config import SENTINEL_VALUE
 
 
 # ---------------------------------------------------------------------------
+# Sampling rate inference
+# ---------------------------------------------------------------------------
+
+def infer_sampling_rate(csv_path: Path, n_rows: int = 100) -> int | None:
+    """
+    Infer the sampling rate (minutes) from the first n_rows of a CSV.
+
+    Reads a small head of the file, computes consecutive timestamp diffs,
+    filters out zeros (duplicate rows) and large gaps (>2 h), then takes
+    the median.  Returns None if a rate cannot be determined.
+    """
+    try:
+        df = pd.read_csv(csv_path, nrows=n_rows, encoding="latin1")
+        time_col = next((c for c in df.columns if c.lower() == "time"), None)
+        if time_col is None:
+            return None
+        times = pd.to_datetime(df[time_col], errors="coerce").dropna().sort_values()
+        if len(times) < 2:
+            return None
+        diffs_sec = times.diff().dropna().dt.total_seconds()
+        diffs_sec = diffs_sec[(diffs_sec > 0) & (diffs_sec <= 7200)]
+        if diffs_sec.empty:
+            return None
+        return max(1, round(diffs_sec.median() / 60))
+    except Exception:
+        return None
+
+
+# ---------------------------------------------------------------------------
 # Gap filling
 # ---------------------------------------------------------------------------
 

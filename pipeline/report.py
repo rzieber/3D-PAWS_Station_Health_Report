@@ -1,4 +1,5 @@
 import re
+import math
 import pandas as pd
 from pathlib import Path
 from openpyxl import Workbook
@@ -14,9 +15,24 @@ def _instrument_sort_key(row: dict) -> int:
 # Hex fills for cell status colors
 _FILLS = {
     "green":  PatternFill(start_color="C6EFCE", end_color="C6EFCE", fill_type="solid"),
-    "yellow": PatternFill(start_color="FFEB9C", end_color="FFEB9C", fill_type="solid"),
     "red":    PatternFill(start_color="FFC7CE", end_color="FFC7CE", fill_type="solid"),
     "header": PatternFill(start_color="2F5496", end_color="2F5496", fill_type="solid"),
+}
+
+# Human-readable header overrides (columns not listed fall back to title-cased snake_case)
+_HEADER_NAMES = {
+    "station":               "Station",
+    "expected_obs":          "Expected Obs",
+    "actual_obs":            "Actual Obs",
+    "overall_uptime":        "Overall Uptime",
+    "rain_gauge_1_total":    "Rain Gauge 1 Total (mm)",
+    "rain_gauge_2_total":    "Rain Gauge 2 Total (mm)",
+    "rainfall_pct_diff":     "Rainfall % Diff",
+    "rain_gauge_corr":       "Rain Gauge Correlation",
+    "rain_gauge_max_diff":   "Max Daily Diff (mm)",
+    "rain_gauge_max_diff_day": "Max Diff Date",
+    "rain_gauge_1_zero_days": "Rain Gauge 1 Zero-Rain Days",
+    "rain_gauge_2_zero_days": "Rain Gauge 2 Zero-Rain Days",
 }
 
 # Which columns get color-coded and what their status column is named
@@ -50,14 +66,16 @@ def generate_report(summary_rows: list[dict], output_path: Path) -> None:
 
     # Write header row
     for col_idx, col_name in enumerate(display_cols, start=1):
-        cell = ws.cell(row=1, column=col_idx, value=col_name.replace("_", " ").title())
+        cell = ws.cell(row=1, column=col_idx, value=_HEADER_NAMES.get(col_name, col_name.replace("_", " ").title()))
         cell.fill = _FILLS["header"]
         cell.font = header_font
         cell.alignment = Alignment(horizontal="center")
 
-    # Write data rows
+    # Write data rows (convert NaN → None so cells are blank, not "nan")
     for row_idx, row in enumerate(df[display_cols].itertuples(index=False), start=2):
         for col_idx, value in enumerate(row, start=1):
+            if isinstance(value, float) and math.isnan(value):
+                value = "N/A"
             ws.cell(row=row_idx, column=col_idx, value=value)
 
     # Apply color coding

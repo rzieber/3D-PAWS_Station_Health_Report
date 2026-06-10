@@ -2,7 +2,64 @@ import pandas as pd
 import numpy as np
 from pathlib import Path
 
-from config import UPTIME_GREEN, UPTIME_YELLOW, RAIN_GAUGE_COLS
+from config import UPTIME_PASS_THRESHOLD, RAIN_GAUGE_COLS, RAIN_GAUGE_PRIOR_COLS, RAIN_GAUGE_TODAY_COLS
+
+
+def compute_daily_rainfall(
+    df: pd.DataFrame,
+    prior_col: str,
+    today_col: str,
+    period_end=None,
+) -> pd.Series:
+    """
+    Reconstruct reliable daily rainfall totals (mm) from Total Prior and Total Today columns.
+
+    Total Prior on day D holds day (D-1)'s complete daily total — a scalar set at
+    midnight that is unaffected by mid-day network gaps.
+
+    Strategy:
+      - For every day that has a following day in the data: use Total Prior from that
+        next day (reliable, complete).
+      - For the last day in the dataset only: fall back to max(Total Today) because no
+        following day's Prior is available.
+      - The first day's own Total Prior value (= the previous month's final day) is
+        discarded.
+
+    period_end : datetime.date or None
+        When set, the returned series is clipped to dates <= period_end.  Pass the
+        last day of the desired analysis period so that any extra "future" day
+        downloaded solely to supply a Total Prior value is excluded from totals.
+
+    Returns a pd.Series indexed by datetime.date.  NaN where data is absent.
+    """
+    if prior_col not in df.columns:
+        return pd.Series(dtype=float)
+
+    tmp = df.copy()
+    tmp["_date"] = pd.to_datetime(tmp["time"]).dt.date
+
+    grouped = tmp.groupby("_date")[prior_col].median()
+    dates   = grouped.index.tolist()
+
+    if not dates:
+        return pd.Series(dtype=float)
+
+    # Total Prior on date D+1 = date D's complete daily total.
+    # Drop element 0 (= previous month's spill) from values; align with dates 0..N-2.
+    daily = pd.Series(grouped.values[1:], index=grouped.index[:-1], dtype=float)
+
+    # Last day in the dataset has no following day — fall back to max(Total Today).
+    last_date = dates[-1]
+    if today_col in df.columns:
+        today_vals = tmp[tmp["_date"] == last_date][today_col].dropna()
+        daily[last_date] = today_vals.max() if not today_vals.empty else float("nan")
+    else:
+        daily[last_date] = float("nan")
+
+    if period_end is not None:
+        daily = daily[daily.index <= period_end]
+
+    return daily.sort_index()
 
 
 def calculate_uptime(df: pd.DataFrame, sampling_rate: int) -> dict:
@@ -42,12 +99,8 @@ def calculate_uptime(df: pd.DataFrame, sampling_rate: int) -> dict:
 
 
 def uptime_status(uptime: float) -> str:
-    """Map an uptime fraction to 'green' | 'yellow' | 'red'."""
-    if uptime >= UPTIME_GREEN:
-        return "green"
-    if uptime >= UPTIME_YELLOW:
-        return "yellow"
-    return "red"
+    """Map an uptime fraction to 'green' (pass) | 'red' (fail)."""
+    return "green" if uptime >= UPTIME_PASS_THRESHOLD else "red"
 
 
 # ---------------------------------------------------------------------------
